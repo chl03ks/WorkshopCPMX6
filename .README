@@ -1,0 +1,470 @@
+Creamos un directorio que se llamaremos Sentimentos y primero instalaremos Gulp, Slush, y Express generator con el siguiente comando.
+
+     npm install -g gulp slush slush-express
+
+Una vez instalado esto utilizaremos el siguiente comando para crear el esqueleto de la aplicación.
+
+     slush express
+
+Nos preguntara por el engine que queremos utilzar para el marcado de html y css y en este cso utlizaremos los normales, HTML y CSS
+
+     Select a View Engine: HTML
+     Select a Stylesheet Engine : CSS
+
+El comando que utilizamos para realzar el esqueleto es el siguiente:
+
+sentimentAnalysisApp
+├── Gulpfile.js
+├── app.js
+├── bin
+│   └── www
+├── bower.json
+├── package.json
+├── public
+│   └── stylesheets
+│       └── style.css
+├── routes
+│   ├── index.js
+│   └── users.js
+└── views
+    ├── error.html
+    └── index.html
+
+Una pequeña explicación para el esqueleto que nos formo para la aplicación es:
+
+     bin/www: donde el puerto esta configurado para correr la aplicación.
+     app.js:     la configuración del server. las rutas y el engine de las vistas.
+     gulpFile.js:  el archivo que se encarga de las pruebas de nuestro proyecto.
+     /public: los archivos estaticos para el UI.
+     /routes:  las rutas de la app.
+     /views:   las vistas de nuestra aplicación.
+
+podemos correr la aplicación ejecutando el comando gulp esto empezara un  servidor Express en el puerto 3000 y podemos navegar a este en http://localhost:3000 y se puede ver la vista de la aplicación generada.
+
+Ahora instalaremos las dependencias del proyecto usando  el siguiente comando.
+
+     npm install twitter sentiment  --save
+
+Despues de haber instalando este modulo crearemos nuestra carpeta de la logica de la aplicación que la llamaremos logic y crearemos dos archivos vacíos al momento llamados busquedaTwitter.js y analisisSentimientos.js y otra carpeta que llamaremos datos donde guardaremos los tweets.
+
+ahora abrimos routes/index.js en tu editor de preferencia en este caso atom. y agregaremos una nueva ruta POST/ search. el texto que el usuario ingrese sera mandado a esta ruta el archivo de routes/index.js quedaría así.
+
+
+'use strict';
+var express = require('express');
+var router = express.Router();
+
+var busquedaTwitter = require('../logic/busquedaTwitter');
+
+ 
+/* GET home page. */
+router.get('/', function(req, res) {
+  res.render('index');
+
+});
+
+
+
+
+ /*
+
+funcion en la que el texto del usuario sera hecho submmit
+
+y la busquedaTwitter.js realizara la busqueda en la API y
+
+se conseguirá los datos de los tweets
+
+*/
+
+
+
+router.post('/search', function(req, res) {
+
+  busquedaTwitter(req.body.search, function (data) {
+
+    res.json(data);
+  });
+});
+ 
+module.exports = router;
+
+busquedaTwitter() la función espera los términos de la búsqueda y conseguir los tweets de twitter. estos tweets
+serán lo que se analizan y los resultados serán regresados en callback simple.
+
+Abrimos el archivo en logic/busquedaTwitter.js y agregamos el siguiente código.
+
+var util = require('util'),
+  twitter = require('twitter'),
+  analisisSentimientos = require('./analisisSentimientos'),
+  db = require('diskdb');
+
+  db = db.connect('db', ['sentiments']);
+
+var config = {
+  consumer_key: 'xxxxxxxxxxxxxxxxxxxxxxxxxxx',
+  consumer_secret: 'xxxxxxxxxxxxxxxxxxxxxxxxxxx',
+  access_token_key: 'xxxxxxxxxxxxxxxxxxxxxxxxxxx-xxxxxxxxxxxxxxxxxxxxxxxxxxx',
+  access_token_secret: 'xxxxxxxxxxxxxxxxxxxxxxxxxxx'
+};
+
+module.exports = function(text, callback) {
+  var twitterClient = new twitter(config);
+  var response = [],
+    dbData = [];
+
+  twitterClient.search(text, function(data) {
+    for (var i = 0; i < data.statuses.length; i++) {
+      var resp = {};
+
+      resp.tweet = data.statuses[i];
+      resp.sentiment = analisisSentimientos(data.statuses[i].text);
+      dbData.push({
+        tweet: resp.tweet.text,
+        score: resp.sentiment.score
+      });
+      response.push(resp);
+    };
+    db.sentiments.save(dbData);
+    callback(response);
+  });
+}
+
+
+
+Instalamos diskdb a tu proyecto con el siguiente comando y creamos una carpeta que se llame db en el directorio raíz.
+
+     npm install diskdb --save
+
+Ahora abrimos logic/analisisSentimientos,js y agregamos el siguiente codigo
+
+var sentiment = require('sentiment');
+
+module.exports = function(text) {
+  return sentiment(text);
+};
+
+la logica es muy sencilla. tomamos el tweet y y regresamos el objeto  sentimiento.
+
+De lado del cliente necesitamos crear una carpeta en la carpeta public que se llame scripts y adentro creamos un archivo llamado app.js y ingresamos  donde ingresaremos la acción de el textfield que en donde se ingresara la palabra a analizar :
+
+$(document).ready(function() {
+  // handle the form submit
+  $('#searchText').on('keypress', function(e) {
+    if (e.which == 13 || e.keyCode == 13) {
+      if ($(this).val().trim().length > 0) {
+        // initiate an Ajax call to send the data
+        fireAJAX($(this).val().trim());
+      }
+    }
+  });
+
+  function fireAJAX(text) {
+    $.ajax({
+      type: 'POST',
+      url: '/search',
+      data: {
+        search: text
+      },
+      beforeSend: function(xhr) {
+        $('.tweet-results').html('');
+        $('.results').show();
+        enableState();
+      },
+      success: parseData,
+      error: oops
+    });
+  }
+
+La función parse Data:
+
+function parseData(data) {
+    disableState();
+    var html = '';
+    for (var i = 0; i < data.length; i++) {
+      var s = data[i].sentiment,
+        t = data[i].tweet;
+
+      var _o = {
+        imgSrc: t.user.profile_image_url,
+        tweetLink: 'http://twitter.com/' + t.user.screen_name + '/status/' + t.id_str,
+        tweet: t.text,
+        score: s.score ? s.score : '--',
+        comparative: s.comparative ? s.comparative : '--',
+        favorited: t.favorite_count ? t.favorite_count : 0,
+        retweet: t.retweet_count ? t.retweet_count : 0,
+        wordsMatched: s.words && s.words.length ? s.words : '--',
+        positiveWords: s.positive && s.positive.length ? s.positive : '--',
+        negativeWords: s.negative && s.negative.length ? s.negative : '--'
+      };
+
+      html += tmpl('tweet_tmpl', _o);
+    };
+    $('.tweet-results').html(html);
+  }
+
+  function oops(data) {
+    $('.error').show();
+    disableState();
+  }
+
+  function disableState() {
+    $('.loading').hide();
+    $('#searchText').prop('disabled', false);
+  }
+
+  function enableState() {
+    $('.loading').show();
+    $('#searchText').prop('disabled', true);
+  }
+});
+
+Utilizaremos a simple javascript templating de John Resing  para poder utilizar {{ }} en la vista.
+
+
+// Simple JavaScript Templating
+// John Resig - http://ejohn.org/ - MIT Licensed
+(function() {
+  var cache = {};
+
+  this.tmpl = function tmpl(str, data) {
+    // Figure out if we're getting a template, or if we need to
+    // load the template - and be sure to cache the result.
+    var fn = !/\W/.test(str) ?
+      cache[str] = cache[str] ||
+      tmpl(document.getElementById(str).innerHTML) :
+
+      // Generate a reusable function that will serve as a template
+      // generator (and which will be cached).
+      new Function("obj",
+        "var p=[],print=function(){p.push.apply(p,arguments);};" +
+
+        // Introduce the data as local variables using with(){}
+        "with(obj){p.push('" +
+
+        // Convert the template into pure JavaScript
+        str
+        .replace(/[\r\t\n]/g, " ")
+        .split("{{").join("\t") // modified
+        .replace(/((^|\}\})[^\t]*)'/g, "$1\r") // modified
+        .replace(/\t=(.*?)}}/g, "',$1,'") // modified
+        .split("\t").join("');")
+        .split("}}").join("p.push('") // modified
+        .split("\r").join("\\'") + "');}return p.join('');");
+
+    // Provide some basic currying to the user
+    return data ? fn(data) : fn;
+  };
+})();
+
+el html en views index.html
+
+<!DOCTYPE html>
+<html>
+
+<head>
+ <link rel='stylesheet' href='/stylesheets/style.css' />
+</head>
+
+<body>
+ <h1>Analisis de sentimientos</h1>
+ <input type="text" id="searchText" placeholder="Palabra">
+ <div class="results">
+   <h3>Resultados:</h3>
+   <lable class="loading">Cargando....</lable>
+   <br/>
+   <lable class="error">Oops.. Algo Salio Mal</lable>
+   <br/>
+ </div>
+ <section class="tweet-results">
+ </section>
+
+ <script src="//code.jquery.com/jquery-1.11.0.min.js"></script>
+ <script type="text/javascript" src="scripts/app.js"></script>
+ <script type="text/html" id="tweet_tmpl">
+   <article>
+
+<div class="wrapper">
+  <div class="tweet-cards">
+    <div class="card-top">
+    </div>
+    <div class="profile-pic">
+          <img src="{{=imgSrc}}">
+    </div>
+    <div class="card-bottom">
+      <p id="name">
+        <p>{{=tweet}}</p>
+        <a href="{{=tweetLink}}" target="_blank">Link al tweet</a>
+      </p>
+      <div class="tweet">
+        <table>
+        <tr>
+          <td>Puntación</td>
+          <td>Favoritos</td>
+          <td>Retweets</td>
+          <td>Palabras Analizadas</td>
+          <td>Palabras Positivas</td>
+          <td>Palabras Negativas</td>
+        </tr>
+        <tr>
+          <td>  {{=score}} </td>
+          <td>  {{=favorited}}</td>
+          <td>  {{=retweet}} </td>
+          <td>{{=wordsMatched}}</td>
+          <td>  {{=positiveWords}}</td>
+          <td>  {{=negativeWords}}</td>
+        </tr>
+      </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+   </article>
+ </script>
+</body>
+</html>
+
+
+El CSS
+
+body {
+  padding: 50px;
+  font: 14px "Lucida Grande", Helvetica, Arial, sans-serif;
+  text-align: center;
+  color: white;
+}
+
+p{
+  color: black;
+}
+a {
+  color: #00B7FF;
+}
+.results {
+  display: none;
+}
+.error {
+  color: red;
+  display: none;
+}
+
+html {
+  background: #00AAE7;
+}
+
+.wrapper {
+  margin: 50px auto;
+  text-align: center;
+}
+
+.tweet-cards{
+  background-color: #F4F4F4;
+  width:80%;
+  height:362px;
+  margin: auto;
+  border-radius: 2px;
+  box-shadow: 3px 3px 3px #007BA8;
+}
+
+.tweet-cards .card-top{
+  background-color: #007BA8;
+  border-bottom: 4px solid #006E96;
+  height:30%;
+  border-radius: 2px 2px 0px 0px;
+}
+
+.tweet-cards .profile-pic{
+  height:60px;
+}
+
+.tweet-cards .profile-pic img{
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  position: relative;
+  margin: -52px 0 0 6px;
+  border: 4px solid white;
+}
+
+p#name a{
+    text-decoration: none;
+    font-family: arial, helvetica;
+    color: #007BA8;
+    font-weight: bold;
+    position: relative;
+    bottom: 8px;
+}
+
+.tweet{
+    position: relative;
+    bottom: 7px;
+    width: 80%;
+    height: 102px;
+    word-wrap: break-word;
+    text-align: center;
+    line-height: 18px;
+    margin: auto;
+    font-weight: 200;
+    font-family: helvetica neue;
+    font-size: 0.95em;
+    color: #545454;
+}
+
+p#date{
+  position: relative;
+  text-align: right;
+  margin: 0 25px 15px 0;
+  font-family: helvetica;
+  font-size: 0.8em;
+  color: #919191;
+}
+table , tr ,td
+{
+  border: 1px solid black;
+  margin: auto;
+
+}
+input {
+  display: block;
+  font-size: 14px;
+  width:340px;
+  margin: 10px auto;
+  padding: 10px 8px 10px 8px;
+  border-radius: 5px;
+  box-shadow: inset 0 1px 2px rgba(0,0,0, .55), 0px 1px 1px rgba(255,255,255,.5);
+  border: 1px solid #666;
+}
+
+input {
+  opacity: 0.5;
+}
+
+input:hover,
+input:focus {
+  opacity: .7;
+  color:#08c;
+  border: 1px solid #08c;
+   box-shadow: 0px 1px 0px rgba(255,255,255,.25),inset 0px 3px 6px rgba(0,0,0,.25);
+}
+
+input[type="text"]:focus,
+input[type="password"]:focus {
+  box-shadow: inset 0 1px 2px rgba(255,255,255, .35), 0px 1px 15px rgba(0,246,255,.5);
+  border: 1px solid #08c;
+  outline: none;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
