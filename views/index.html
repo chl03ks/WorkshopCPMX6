@@ -1,13 +1,51 @@
 <!DOCTYPE html>
 <html>
-  <head>
-    <title><%= title %></title>
-    <link rel='stylesheet' href='/stylesheets/style.css' />
-  </head>
-  <body>
-    <h1><%= title %></h1>
-    <p>Welcome to <%= title %></p>
-    <!-- Live reload script -->
-    <script type="text/javascript" src="http://localhost:35729/livereload.js"></script>
-  </body>
+
+<head>
+ <link rel='stylesheet' href='/stylesheets/style.css' />
+</head>
+
+<body>
+ <h1>Analisis de sentimientos</h1>
+ <hr/>
+ <input type="text" id="searchText" placeholder="Ingresa la palabra a analizar">
+ <div class="results">
+   <h3>Resultados</h3>
+   <lable class="loading">Cargando....</lable>
+   <br/>
+   <lable class="error">Oops.. Algo Salio Mal</lable>
+   <br/>
+ </div>
+ <section class="tweet-results">
+ </section>
+
+ <script src="//code.jquery.com/jquery-1.11.0.min.js"></script>
+ <script type="text/javascript" src="scripts/app.js"></script>
+ <script type="text/html" id="tweet_tmpl">
+   <article>
+     <div class="left">
+       <img src="{{=imgSrc}}">
+       <p>{{=tweet}}
+       <a href="{{=tweetLink}}" target="_blank">Link a twitter</a></p>
+     </div>
+     <div class="right">
+          Score
+          {{=score}}
+          Comparative
+          {{=comparative}}
+          Favorited
+          {{=favorited}}
+          Retweeted
+          {{=retweet}}
+          Words Matched
+          {{=wordsMatched}}
+          Positive Words
+          {{=positiveWords}}
+          Negative Words
+          {{=negativeWords}}
+       </table>
+     </div>
+   </article>
+ </script>
+</body>
 </html>

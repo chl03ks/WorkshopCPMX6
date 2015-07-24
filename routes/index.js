@@ -1,7 +1,7 @@
 'use strict';
 var express = require('express');
 var router = express.Router();
-var busquedaTwitter = require('../logic/busquedaTwitter')
+var busquedaTwitter = require('../logic/busquedaTwitter');
 
 /* GET home page. */
 router.get('/', function(req, res) {
@@ -18,7 +18,13 @@ se conseguirá los datos de los tweets
 router.post('/search', function(req, res) {
   busquedaTwitter(req.body.search, function(data) {
     res.json(data);
-  })
+  });
+});
+
+router.get('/data', function(req, res) {
+  res.json(require('diskdb')
+    .connect('db', ['sentiments'])
+    .sentiments.find());
 });
 
 module.exports = router;
