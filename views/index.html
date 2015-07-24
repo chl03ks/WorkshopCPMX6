@@ -7,10 +7,9 @@
 
 <body>
  <h1>Analisis de sentimientos</h1>
- <hr/>
- <input type="text" id="searchText" placeholder="Ingresa la palabra a analizar">
+ <input type="text" id="searchText" placeholder="Palabra">
  <div class="results">
-   <h3>Resultados</h3>
+   <h3>Resultados:</h3>
    <lable class="loading">Cargando....</lable>
    <br/>
    <lable class="error">Oops.. Algo Salio Mal</lable>
@@ -23,28 +22,43 @@
  <script type="text/javascript" src="scripts/app.js"></script>
  <script type="text/html" id="tweet_tmpl">
    <article>
-     <div class="left">
-       <img src="{{=imgSrc}}">
-       <p>{{=tweet}}
-       <a href="{{=tweetLink}}" target="_blank">Link a twitter</a></p>
-     </div>
-     <div class="right">
-          Score
-          {{=score}}
-          Comparative
-          {{=comparative}}
-          Favorited
-          {{=favorited}}
-          Retweeted
-          {{=retweet}}
-          Words Matched
-          {{=wordsMatched}}
-          Positive Words
-          {{=positiveWords}}
-          Negative Words
-          {{=negativeWords}}
-       </table>
-     </div>
+
+<div class="wrapper">
+  <div class="tweet-cards">
+    <div class="card-top">
+    </div>
+    <div class="profile-pic">
+          <img src="{{=imgSrc}}">
+    </div>
+    <div class="card-bottom">
+      <p id="name">
+        <p>{{=tweet}}</p>
+        <a href="{{=tweetLink}}" target="_blank">Link al tweet</a>
+      </p>
+      <div class="tweet">
+        <table>
+        <tr>
+          <td>Puntación</td>
+          <td>Favoritos</td>
+          <td>Retweets</td>
+          <td>Palabras Analizadas</td>
+          <td>Palabras Positivas</td>
+          <td>Palabras Negativas</td>
+        </tr>
+        <tr>
+          <td>  {{=score}} </td>
+          <td>  {{=favorited}}</td>
+          <td>  {{=retweet}} </td>
+          <td>{{=wordsMatched}}</td>
+          <td>  {{=positiveWords}}</td>
+          <td>  {{=negativeWords}}</td>
+        </tr>
+      </table>
+      </div>
+    </div>
+  </div>
+</div>
+
    </article>
  </script>
 </body>
